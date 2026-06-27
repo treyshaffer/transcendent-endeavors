@@ -6,7 +6,7 @@ Flow: Ingest this week -> Generate (No-RAG vs RAG side by side) -> Embedding map
 import streamlit as st
 
 from src import generate, ingest, seed, store, viz
-from src.config import GEN_MODEL, HAS_API_KEY, SUBREDDIT, VECTOR_BACKEND
+from src.config import GEN_MODEL, SUBREDDIT, VECTOR_BACKEND
 from src.embeddings import embed
 
 st.set_page_config(page_title="Community Voices", layout="wide")
@@ -80,9 +80,10 @@ with st.sidebar:
     if total is not None:
         st.metric("Chunks in store", total)
 
-    if not HAS_API_KEY:
-        st.warning("ANTHROPIC_API_KEY not set — ingest/map/stats work, but document "
-                   "generation will fail. Set it in `.env`.")
+    if generate._use_stub():
+        st.info("🧪 Simulated generation (no API key) — documents are stitched from "
+                "retrieved context, not a live LLM. Set `ANTHROPIC_API_KEY` in `.env` "
+                "(or `GEN_BACKEND=anthropic`) for real model output.")
 
 # ---- Tabs ------------------------------------------------------------------
 tab_docs, tab_map, tab_stats = st.tabs(

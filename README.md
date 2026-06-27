@@ -18,15 +18,17 @@ it** — retrieval is data-derived, so any text-rich subreddit works via `SUBRED
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt          # one command; first run pulls torch (a few min)
-cp .env.example .env                      # then set ANTHROPIC_API_KEY=...
+cp .env.example .env                      # optional: set ANTHROPIC_API_KEY for real LLM text
 python -m src.verify                      # one-command end-to-end check; writes DEMO_OUTPUT.md
 streamlit run app.py
 ```
 
-That's it — **the default vector store is in-memory, so there's nothing else to
-install or run.** (`ANTHROPIC_API_KEY` is the only key needed; embeddings run
-locally. Tip: `GEN_MODEL=claude-haiku-4-5` in `.env` makes generation ~free while
-you test, then switch back to Opus for the demo.)
+That's it — **no Docker, no database, and no API key required to run.** The default
+vector store is in-memory, and with no key the app uses **simulated generation**
+(documents stitched from the retrieved context, clearly labeled in the UI) so the
+full ingest → retrieve → A/B → map → stats flow works out of the box. Add
+`ANTHROPIC_API_KEY` to `.env` for real Claude output (embeddings always run
+locally). Tip: `GEN_MODEL=claude-haiku-4-5` makes real generation ~free.
 
 In the browser: **Ingest this week** (or **Load sample data** if Reddit blocks your
 network) → **Documents (A/B)** → **Generate both** → **Embedding map** → **Render**
@@ -147,9 +149,12 @@ everything **deduped** by content hash before embedding.
 - **Embeddings are local** (`sentence-transformers`), so generation is the only
   thing that needs an API key. Anthropic has no embeddings endpoint — that's why
   the embedding model is separate from the Claude generation model.
-- **Generation** uses `claude-opus-4-8` with adaptive thinking and streaming
-  (~$0.15–0.30 per A/B run; embeddings/ingest are free). Set
-  `GEN_MODEL=claude-haiku-4-5` for near-free iteration.
+- **Generation backend** (`GEN_BACKEND`): `auto` (default — real Claude when a key
+  is set, else simulated), `anthropic` (force real), `stub` (force simulated, no
+  key/network). Real generation uses `claude-opus-4-8` with adaptive thinking +
+  streaming (~$0.15–0.30 per A/B run; `GEN_MODEL=claude-haiku-4-5` for near-free).
+  Simulated mode stitches the document from retrieved context so the app and the
+  A/B contrast work with zero setup.
 - **Security**: put your real key only in `.env` (gitignored). Never in
   `.env.example` (committed). If a key has ever touched a tracked file, rotate it.
 - `requirements.txt` includes `psycopg`/`pgvector`; they're only used when

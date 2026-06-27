@@ -19,6 +19,11 @@ SUBREDDIT = os.environ.get("SUBREDDIT", "japanweather")
 # Generation needs a key; ingest/seed/viz/stats don't — so warn, don't hard-fail.
 HAS_API_KEY = bool(os.environ.get("ANTHROPIC_API_KEY"))
 
+# Generation backend: "auto" (default) uses Claude when a key is present, else a
+# local simulated generator so the app runs with NO key. "anthropic" forces the
+# real model; "stub" forces simulated (offline, no LLM).
+GEN_BACKEND = os.environ.get("GEN_BACKEND", "auto").lower()
+
 # Generation model. Default to Opus for the demo; override via env for cheap
 # iteration, e.g. GEN_MODEL=claude-haiku-4-5 (exact ids, no date suffix).
 GEN_MODEL = os.environ.get("GEN_MODEL", "claude-opus-4-8")

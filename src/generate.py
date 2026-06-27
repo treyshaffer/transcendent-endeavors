@@ -13,8 +13,17 @@ import re
 import anthropic
 
 from . import store
-from .config import GEN_MODEL, SUBREDDIT
+from .config import GEN_BACKEND, GEN_MODEL, HAS_API_KEY, SUBREDDIT
 from .embeddings import embed
+
+
+def _use_stub() -> bool:
+    """Simulated generation when forced, or in 'auto' mode with no API key."""
+    if GEN_BACKEND == "stub":
+        return True
+    if GEN_BACKEND == "anthropic":
+        return False
+    return not HAS_API_KEY  # "auto"
 
 # Community-neutral intent probes — coverage of asks/complaints regardless of topic.
 # (The bulk of retrieval is data-derived via clustering; see retrieve_context.)
@@ -106,6 +115,40 @@ def count_citations(doc: str) -> int:
     return len(_PERMALINK_RE.findall(doc))
 
 
+def _stub_norag() -> str:
+    """Simulated baseline — no retrieval, no LLM."""
+    return (
+        f"## What the community discussed this past week\n\n"
+        f"_Simulated baseline (no retrieval, no LLM — set `ANTHROPIC_API_KEY` or "
+        f"`GEN_BACKEND=anthropic` for real model output)._\n\n"
+        f"- General, non-time-specific discussion typical of r/{SUBREDDIT}.\n"
+        f"- No reference to this week's actual threads — that's the point of the baseline.\n\n"
+        f"## What the community will likely discuss next week\n\n"
+        f"- Generic continuation of the community's usual topics.\n"
+    )
+
+
+def _stub_rag(chunks) -> str:
+    """Simulated RAG — stitch the document straight from retrieved context (real
+    titles + permalinks), so the A/B mechanics work with no LLM call."""
+    seen, items = set(), []
+    for c in chunks:
+        if c["post_id"] in seen:
+            continue
+        seen.add(c["post_id"])
+        url = f"https://www.reddit.com{c['permalink']}" if c.get("permalink") else ""
+        items.append((c.get("title") or c["text"][:70], url))
+    past = "\n".join(f"- **{t}** ({u})" for t, u in items[:8])
+    nxt = "\n".join(f"- Likely continued discussion of: {t}" for t, _ in items[:4])
+    return (
+        f"## What the community discussed this past week\n\n"
+        f"_Simulated generation (`GEN_BACKEND=stub`): stitched from {len(chunks)} "
+        f"retrieved chunks across {len(seen)} posts — no LLM. Set a key for real output._\n\n"
+        f"{past}\n\n"
+        f"## What the community will likely discuss next week\n\n{nxt}\n"
+    )
+
+
 _BASE_TASK = (
     "Write a 'Community Voices Document' for the subreddit r/{sub}. "
     "Today is {today}. Use exactly two sections:\n"
@@ -119,13 +162,16 @@ _BASE_TASK = (
 
 def generate_norag():
     """Baseline: no retrieval, model prior knowledge only."""
-    task = _BASE_TASK.format(sub=SUBREDDIT, today=_today())
-    system = (
-        "You are an analyst summarizing an online community. You have NO access to "
-        "this week's posts — rely only on your general knowledge of the community. "
-        "Do not invent specific posts, usernames, or links you cannot verify."
-    )
-    doc = _complete(system, task)
+    if _use_stub():
+        doc = _stub_norag()
+    else:
+        task = _BASE_TASK.format(sub=SUBREDDIT, today=_today())
+        system = (
+            "You are an analyst summarizing an online community. You have NO access to "
+            "this week's posts — rely only on your general knowledge of the community. "
+            "Do not invent specific posts, usernames, or links you cannot verify."
+        )
+        doc = _complete(system, task)
     return {"document": doc, "mode": "no-rag", "citations": count_citations(doc), "context_chunks": 0}
 
 
@@ -139,18 +185,21 @@ def generate_rag(k: int = 4):
             "mode": "rag", "citations": 0, "context_chunks": 0,
             "unique_posts": 0, "retrieved": [],
         }
-    context = _format_context(chunks)
-    task = _BASE_TASK.format(sub=SUBREDDIT, today=_today())
-    system = (
-        "You are an analyst summarizing an online community. You are given a set of "
-        "REAL excerpts retrieved from this past week's posts and comments. Cite the "
-        "source link in parentheses after EVERY claim. Assert nothing that is not "
-        "directly supported by the excerpts — do not invent threads, users, or links. "
-        "For next-week predictions, reason only from recurring/seasonal patterns "
-        "visible in the excerpts."
-    )
-    user = f"{task}\n\nRetrieved excerpts from this past week:\n{context}"
-    doc = _complete(system, user)
+    if _use_stub():
+        doc = _stub_rag(chunks)
+    else:
+        context = _format_context(chunks)
+        task = _BASE_TASK.format(sub=SUBREDDIT, today=_today())
+        system = (
+            "You are an analyst summarizing an online community. You are given a set of "
+            "REAL excerpts retrieved from this past week's posts and comments. Cite the "
+            "source link in parentheses after EVERY claim. Assert nothing that is not "
+            "directly supported by the excerpts — do not invent threads, users, or links. "
+            "For next-week predictions, reason only from recurring/seasonal patterns "
+            "visible in the excerpts."
+        )
+        user = f"{task}\n\nRetrieved excerpts from this past week:\n{context}"
+        doc = _complete(system, user)
     return {
         "document": doc,
         "mode": "rag",

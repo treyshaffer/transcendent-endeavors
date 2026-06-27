@@ -243,6 +243,20 @@ class TestGeneration(unittest.TestCase):
         self.assertGreaterEqual(
             generate.count_citations("see https://www.reddit.com/r/x/comments/1/"), 1)
 
+    def test_stub_generation_no_key(self):
+        """Simulated mode works with no API client at all."""
+        orig = generate.GEN_BACKEND
+        generate.GEN_BACKEND = "stub"
+        try:
+            rag = generate.generate_rag(k=4)
+            self.assertGreater(rag["citations"], 0)       # stub stitches in real permalinks
+            self.assertGreater(rag["unique_posts"], 0)
+            self.assertIn("simulated", rag["document"].lower())
+            norag = generate.generate_norag()
+            self.assertEqual(norag["citations"], 0)        # baseline has no links
+        finally:
+            generate.GEN_BACKEND = orig
+
 
 # ---------- visualization ----------------------------------------------------
 class TestViz(unittest.TestCase):

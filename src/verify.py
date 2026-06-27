@@ -35,13 +35,15 @@ def _rag_summary(res):
 
 
 def _write_demo_output():
+    from . import generate
     norag, rag = _results.get("norag"), _results.get("rag")
     if not (norag and rag):
         return
+    gen_label = "simulated generation (no LLM)" if generate._use_stub() else f"model `{GEN_MODEL}`"
     md = (
         f"# Demo output — Community Voices (r/{SUBREDDIT})\n\n"
-        f"_Captured by `python -m src.verify` using model `{GEN_MODEL}`. "
-        f"This is the actual A/B output; regenerate any time._\n\n"
+        f"_Captured by `python -m src.verify` using {gen_label}. "
+        f"This is the actual A/B output; regenerate any time (add a key for real LLM text)._\n\n"
         f"## Metrics\n\n"
         f"| | No-RAG (baseline) | RAG-empowered |\n|---|---|---|\n"
         f"| permalink citations | {norag['citations']} | {rag['citations']} |\n"
@@ -57,14 +59,16 @@ def _write_demo_output():
 def main():
     import os
 
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        print("ERROR: ANTHROPIC_API_KEY not set. Copy .env.example to .env and set your key.")
-        sys.exit(1)
-
     from . import generate, ingest, seed, store, viz
     from .embeddings import embed
 
-    print(f"Community Voices smoke test — r/{SUBREDDIT} · model {GEN_MODEL}\n")
+    if not generate._use_stub() and not os.environ.get("ANTHROPIC_API_KEY"):
+        print("ERROR: ANTHROPIC_API_KEY not set. Copy .env.example to .env and set your "
+              "key, or set GEN_BACKEND=stub to run with simulated generation.")
+        sys.exit(1)
+
+    gen_label = "simulated (no LLM)" if generate._use_stub() else GEN_MODEL
+    print(f"Community Voices smoke test — r/{SUBREDDIT} · generation: {gen_label}\n")
     ok = True
 
     ok &= _step(
