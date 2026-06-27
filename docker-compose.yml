@@ -1,0 +1,24 @@
+# Postgres + pgvector for the Community Voices vector store.
+# `docker compose up -d db` is the only infra step the evaluator needs.
+# schema.sql is auto-applied on first init via docker-entrypoint-initdb.d.
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: community_voices_db
+    environment:
+      POSTGRES_USER: cv
+      POSTGRES_PASSWORD: cv
+      POSTGRES_DB: community_voices
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cv -d community_voices"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:

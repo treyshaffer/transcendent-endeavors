@@ -1,0 +1,9 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+venv/
+.DS_Store
+.claude/
+# sentence-transformers / HF model cache if pointed locally
+.cache/

@@ -1,0 +1,14 @@
+# Community Voices — Transcendent Endeavors take-home
+# Python 3.9+
+
+streamlit>=1.33
+anthropic>=0.40
+sentence-transformers>=2.7      # local embeddings (all-MiniLM-L6-v2); pulls torch
+psycopg[binary]>=3.1            # Postgres driver
+pgvector>=0.2.5                 # numpy <-> vector adaptation for psycopg3
+httpx>=0.27                     # Reddit JSON fetch
+umap-learn>=0.5                 # 2D embedding projection (PCA fallback if missing)
+scikit-learn>=1.3              # KMeans clustering + PCA fallback
+matplotlib>=3.8                # embedding scatter plot
+numpy>=1.24
+python-dotenv>=1.0             # load ANTHROPIC_API_KEY / DATABASE_URL from .env
