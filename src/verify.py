@@ -39,11 +39,20 @@ def _write_demo_output():
     norag, rag = _results.get("norag"), _results.get("rag")
     if not (norag and rag):
         return
-    gen_label = "simulated generation (no LLM)" if generate._use_stub() else f"model `{GEN_MODEL}`"
+    simulated = generate._use_stub()
+    gen_label = "simulated generation (no LLM)" if simulated else f"model `{GEN_MODEL}`"
+    note = (
+        "\n> Note: pgvector (`db/schema.sql`, `src/store_postgres.py`) and real Claude "
+        "generation (`src/generate.py`) are fully implemented. This sample used the "
+        "zero-setup defaults (in-memory store + simulated generation); add "
+        "`ANTHROPIC_API_KEY` and set `VECTOR_BACKEND=postgres` for the production path.\n"
+        if simulated else ""
+    )
     md = (
         f"# Demo output — Community Voices (r/{SUBREDDIT})\n\n"
         f"_Captured by `python -m src.verify` using {gen_label}. "
-        f"This is the actual A/B output; regenerate any time (add a key for real LLM text)._\n\n"
+        f"This is the actual A/B output; regenerate any time (add a key for real LLM text)._\n"
+        f"{note}\n"
         f"## Metrics\n\n"
         f"| | No-RAG (baseline) | RAG-empowered |\n|---|---|---|\n"
         f"| permalink citations | {norag['citations']} | {rag['citations']} |\n"

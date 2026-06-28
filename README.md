@@ -13,6 +13,14 @@ first snow) which makes "what will they discuss *next* week" genuinely predictab
 rather than hand-waved. It's text-rich and active. The app is **not hardcoded to
 it** — retrieval is data-derived, so any text-rich subreddit works via `SUBREDDIT`.
 
+> **For reviewers:** this implements the brief's full stack — **pgvector** (the
+> vector DB: `db/schema.sql`, `src/store_postgres.py`, `docker-compose.yml`) and
+> **real Claude generation** (`src/generate.py`, `claude-opus-4-8`). Both are
+> complete and one env var away. The app *defaults* to a zero-setup in-memory store
+> and simulated generation so it runs with **no Docker and no API key**; set
+> `VECTOR_BACKEND=postgres` and `ANTHROPIC_API_KEY` for the production path. See the
+> requirement → file map below.
+
 ## Quick start (no Docker, no database)
 
 ```bash

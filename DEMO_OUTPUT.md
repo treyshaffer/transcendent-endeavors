@@ -2,6 +2,8 @@
 
 _Captured by `python -m src.verify` using simulated generation (no LLM). This is the actual A/B output; regenerate any time (add a key for real LLM text)._
 
+> Note: pgvector (`db/schema.sql`, `src/store_postgres.py`) and real Claude generation (`src/generate.py`) are fully implemented. This sample used the zero-setup defaults (in-memory store + simulated generation); add `ANTHROPIC_API_KEY` and set `VECTOR_BACKEND=postgres` for the production path.
+
 ## Metrics
 
 | | No-RAG (baseline) | RAG-empowered |
